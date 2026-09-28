@@ -108,14 +108,15 @@ test('adapter requires sessionId and rejects unsupported generation controls', a
   }
 })
 
-test('tools are accepted but transport receives only browser prompt fields', async () => {
+test('empty tool declarations and loop tool history allow plain chat', async () => {
   const transport = new FakeTransport([
     { type: 'session-ready', requestId: 'placeholder', conversationUrl: 'https://chatgpt.com/c/a', seq: 0 },
     { type: 'complete', requestId: 'placeholder', text: 'ok', seq: 1 },
   ])
   const adapter = await adapterFor(transport)
   const chunks = await collect(adapter, options({
-    tools: [{ name: 'bash', description: 'not exposed in v0.1', parameters: { type: 'object' } }],
+    tools: [],
+    toolHistory: { tools: [], updates: [] },
   }))
   assert.equal(chunks.at(-1)?.type, 'finish')
   assert.equal(transport.requests.length, 1)

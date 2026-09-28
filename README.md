@@ -15,13 +15,13 @@ No OpenAI API key, OpenAI Platform inference credits, or Secure MCP Tunnel are r
 
 ## Status
 
-**v0.1 implementation and release acceptance are complete. Market/npm publication is still a work in progress.**
+**Solis compatibility fork: `0.1.1-solis.1`, targeting DSH `0.1.7-rc.2`.**
 
-The core DSH -> bridge -> Chrome extension -> managed ChatGPT conversation path is fully functional. The previously observed premature-completion bug (where ChatGPT could expose a stable partial answer after Stop disappeared before the answer was fully rendered) has been resolved: completion now requires semantic completed-response action controls (including `data-testid="copy-turn-action-button"`) in addition to Stop disappearance and stability.
+This branch ports the DSH adapter to the current message model. It preserves the original browser extension, loopback bridge, FIFO queue, managed-conversation ownership, and authoritative-completion-only output. Market/npm publication is still a work in progress.
 
-Browser acceptance has been verified across all core scenarios (multi-turn reuse, distinct session URLs, switch-back restoration, full authoritative text extraction, abort handling with intentional uncertain -> fresh rehydrate safety semantics, restart persistence, and safe missing-chat recovery).
+The upstream `0.1.0` author recorded completed browser and packed-install acceptance on DSH `0.1.1-rc.2`. That historical result does **not** certify this fork on Windows or the current ChatGPT UI. Authenticated Chrome/ChatGPT acceptance for this fork is pending; use an isolated DSH profile first.
 
-Local unit/regression tests (56/56), type check, build, `npm pack --dry-run`, and packed-install verification have passed. The generated tarball installed successfully into an isolated DSH profile and registered the expected `chatgpt-web/auto` bundle/model without depending on the source checkout.
+See [the compatibility and acceptance notes](docs/dsh-0.1.7-compatibility.md) for supported inputs, cloud verification, and remaining local gates. The upstream premature-completion issue was resolved using semantic response action controls before `generation-complete`; that browser implementation is unchanged.
 
 See:
 
@@ -48,7 +48,7 @@ Implemented or substantially implemented:
 Intentional v0.1 limitations:
 
 - text-only input/output;
-- DSH tool schemas may be accepted by the adapter, but they are not callable from ChatGPT in v0.1;
+- DSH tool schemas are rejected when nonempty; native tools are not callable from ChatGPT in this fork (empty tool declarations/history are accepted);
 - an external Chrome/Chromium browser with the bundled unpacked extension is required;
 - ChatGPT Web DOM changes can require updates to `extension/chatgpt-page-adapter.js`;
 - `reasoningEffort`, `temperature`, `maxTokens`, `stop`, and DSH auxiliary `purpose` calls are rejected as unsupported;
@@ -78,7 +78,7 @@ This intentionally sacrifices token-by-token DSH streaming for v0.1 correctness.
 
 ## Requirements
 
-- DeepSeek Harness `0.1.1-rc.2`;
+- DeepSeek Harness `0.1.7-rc.2` and `@deepseek-ai/cordis ~4.0.4`;
 - Node.js `^22.19.0 || >=24.0.0`;
 - Chrome/Chromium with access to `https://chatgpt.com`;
 - a logged-in ChatGPT Web session;
@@ -87,19 +87,15 @@ This intentionally sacrifices token-by-token DSH streaming for v0.1 correctness.
 ## Development install
 
 ```bash
-npm install
+npm ci
 npm run check
 npm test
 npm run build
 
-dsh plugin --profile web add .
+dsh plugin --profile chatgpt-web-compat add .
 ```
 
-Then start DSH:
-
-```bash
-dsh web
-```
+Use a separately initialized test profile and an unused Web port for browser acceptance. Confirm the profile/port flags with your installed `dsh web --help`; see the acceptance notes before starting it. The bridge remains fixed at `127.0.0.1:8765`, so only one instance of this plugin can run on the same host at a time.
 
 At startup the plugin logs the loopback bridge and bundled extension directory:
 
@@ -127,7 +123,7 @@ The intended install command after an npm release is:
 dsh plugin --profile web add dsh-chatgpt-web
 ```
 
-v0.1 release acceptance is complete; this README does not yet claim that an npm release is available.
+The compatibility fork is not published to npm. Install its locally built tarball for acceptance; the package-name command above describes the upstream intended publication path only.
 
 ## Conversation model
 
@@ -135,7 +131,7 @@ DSH remains the canonical durable transcript. A managed ChatGPT conversation is 
 
 For normal continuation, the adapter sends only the DSH history suffix that is not already synchronized. It never sends ChatGPT's previous assistant output back into the same ChatGPT conversation as a new user message.
 
-DSH can append runtime context as `role=user` messages whose structural source is a plugin snapshot. Bridge prompts preserve those messages as context but explicitly target the newest message whose `source.kind === "user"` as the human request. Later user-role plugin/tool messages are context, not a new human turn.
+DSH can append runtime context as `role=user` messages whose structural source is a plugin snapshot. Producer-owned source kinds replace the old generic plugin source in DSH 0.1.7. Bridge prompts preserve those messages as context but explicitly target the newest message whose `source.kind === "user"` as the human request. Later user-role plugin/tool messages are context, not a new human turn.
 
 If the managed ChatGPT conversation is missing before Send, the adapter can safely clear the mapping and perform one fresh rehydration attempt from canonical DSH history. If generation is aborted after submission or a post-dispatch failure makes provider state ambiguous, the session is marked `uncertain`; a later turn rehydrates into a fresh managed conversation instead of blindly replaying the ambiguous request.
 
@@ -205,9 +201,9 @@ npm run build
 npm pack --dry-run
 ```
 
-Fresh local verification (56/56 tests) passed at the doc-sync HEAD. Packed-install verification also passed from the generated tarball in an isolated `chatgpt-web-smoke` profile, confirming the packaged plugin installs without depending on the source checkout and exposes the expected bundle/model registration.
+The Solis compatibility candidate passes production/test type checks and 68 automated tests, including the actual DSH LLM Runtime with a simulated browser transport. Build and package checks also pass. The upstream 56-test and isolated DSH profile results remain historical evidence for its earlier release.
 
-Real-browser acceptance is manual because it depends on the authenticated ChatGPT Web session. See [`docs/manual-smoke.md`](docs/manual-smoke.md).
+Real-browser acceptance is pending and requires an authenticated ChatGPT Web session. See [the current acceptance checklist](docs/dsh-0.1.7-compatibility.md); [`docs/manual-smoke.md`](docs/manual-smoke.md) preserves the upstream scenarios.
 
 ## Browser DOM maintenance
 
@@ -221,7 +217,7 @@ Do not spread ChatGPT selectors into the DSH adapter, transport, session manager
 
 When a live DOM defect is found, gather evidence first, write a focused regression fixture/test, verify RED, then make the smallest production change. Historically, the premature-completion bug was resolved by introducing semantic response action checks rather than merely increasing the stability timeout.
 
-## Roadmap
+## Upstream roadmap (outside this compatibility port)
 
 ```text
 v0.1  text + managed conversations + authoritative final output + abort

@@ -52,6 +52,9 @@ export async function installRuntime(ctx: Context, runtime: RuntimeAssembly): Pr
   const address = await runtime.bridge.start()
   ctx.effect(() => () => runtime.transport.dispose())
   ctx.llm.registerAdapter([CHATGPT_WEB_PROVIDER], runtime.adapter)
+  ctx.on('llm/stream', (options, next) => options.provider === CHATGPT_WEB_PROVIDER
+    ? runtime.adapter.withRequestContext(options, next)
+    : next())
 
   ctx.logger.info(`[dsh-chatgpt-web] bridge listening on ws://${address.host}:${address.port}`)
   ctx.logger.info(`[dsh-chatgpt-web] Chrome extension directory: ${runtime.extensionDirectory}`)

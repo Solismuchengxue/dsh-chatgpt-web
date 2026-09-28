@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { AsyncLocalStorage } from 'node:async_hooks'
 import {
   LlmAdapter,
   LlmError,
@@ -11,6 +12,7 @@ import {
 import type { ChatTransport, TransportEvent } from './protocol.js'
 import { RequestQueue } from './request-queue.js'
 import { SessionManager } from './session-manager.js'
+import { normalizeRequest } from './history.js'
 
 export const CHATGPT_WEB_PROVIDER = 'chatgpt-web'
 export const CHATGPT_WEB_MODEL = 'auto'
@@ -59,6 +61,9 @@ function assertSupportedRequest(options: GenerateOptions): void {
   }
 
   const unsupported: string[] = []
+  if (options.tools !== undefined && options.tools.length > 0) unsupported.push('tools')
+  if (options.toolHistory !== undefined
+    && (options.toolHistory.tools.length > 0 || options.toolHistory.updates.length > 0)) unsupported.push('toolHistory')
   if (options.reasoningEffort !== undefined) unsupported.push('reasoningEffort')
   if (options.temperature !== undefined) unsupported.push('temperature')
   if (options.maxTokens !== undefined) unsupported.push('maxTokens')
@@ -121,6 +126,7 @@ export class ChatGptWebAdapter extends LlmAdapter {
   private readonly transport: ChatTransport
   private readonly sessions: SessionManager
   private readonly queue: RequestQueue
+  private readonly requestContext = new AsyncLocalStorage<GenerateOptions>()
 
   constructor(options: ChatGptWebAdapterOptions) {
     super()
@@ -145,7 +151,37 @@ export class ChatGptWebAdapter extends LlmAdapter {
     return MODEL_INFO
   }
 
+  /** Preserve canonical inputs across DSH's file/image/tool projection without mutating them. */
+  async *withRequestContext(options: GenerateOptions, next: () => AsyncIterable<StreamChunk>): AsyncIterable<StreamChunk> {
+    try {
+      assertSupportedRequest(options)
+      normalizeRequest(options.system, options.messages)
+    } catch (error) {
+      if (!(error instanceof LlmError)) throw error
+      yield { type: 'finish', reason: {
+        kind: options.signal?.aborted ? 'aborted' : 'error', failure: error.failure,
+      } }
+      return
+    }
+    const iterator = next()[Symbol.asyncIterator]()
+    try {
+      while (true) {
+        // Async generators execute when next() is called, not when constructed.
+        const item = await this.requestContext.run(options, () => iterator.next())
+        if (item.done) return
+        yield item.value
+      }
+    } finally {
+      await this.requestContext.run(options, () => iterator.return?.())
+    }
+  }
+
   override async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
+    const original = this.requestContext.getStore()
+    if (original !== undefined && original.provider === options.provider
+      && original.model === options.model && original.sessionId === options.sessionId) {
+      options = { ...options, system: original.system, messages: original.messages }
+    }
     assertSupportedRequest(options)
     const sessionId = String(options.sessionId)
     const release = await this.queue.acquire(options.signal)

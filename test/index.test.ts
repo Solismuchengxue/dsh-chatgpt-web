@@ -67,6 +67,7 @@ test('plugin lifecycle registers exactly chatgpt-web, logs setup, and disposes t
     effect(factory: () => () => void | Promise<void>) {
       disposers.push(factory())
     },
+    on() {},
   } as unknown as Context
 
   await installRuntime(ctx, runtime)

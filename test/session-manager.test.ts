@@ -6,6 +6,16 @@ import test from 'node:test'
 import { createAssistantMessage, createUserMessage, type Message } from '@deepseek-ai/dsh-llm'
 import { SessionManager } from '../src/session-manager.js'
 
+declare module '@deepseek-ai/dsh-llm' {
+  interface MessageSourceMap {
+    'test-runtime': {
+      kind: 'test-runtime'
+      form: 'snapshot'
+      sections: readonly { name: string; text: string }[]
+    }
+  }
+}
+
 function user(text: string): Message {
   return createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] })
 }
@@ -13,8 +23,7 @@ function user(text: string): Message {
 function runtimeContext(text: string): Message {
   return createUserMessage({
     source: {
-      kind: 'plugin',
-      plugin: '@deepseek-ai/dsh-system-prompt',
+      kind: 'test-runtime',
       form: 'snapshot',
       sections: [{ name: 'runtime', text }],
     },

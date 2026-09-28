@@ -2,10 +2,11 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import envPaths from 'env-paths'
-import type { Message } from '@deepseek-ai/dsh-llm'
+import type { Message, RequestMessage } from '@deepseek-ai/dsh-llm'
 import { canonicalManagedConversationUrl } from './protocol.js'
 import {
   historyDigest,
+  normalizeRequest,
   serializeHistory,
   syntheticAssistantMessage,
   textDigest,
@@ -114,7 +115,8 @@ export class SessionManager {
     this.statePath = statePath
   }
 
-  async plan(sessionId: string, system: string | undefined, messages: readonly Message[]): Promise<TurnPlan> {
+  async plan(sessionId: string, requestSystem: string | undefined, requestMessages: readonly RequestMessage[]): Promise<TurnPlan> {
+    const { system, messages } = normalizeRequest(requestSystem, requestMessages)
     const state = await this.state()
     const existing = state.sessions[sessionId]
     if (existing === undefined) return { kind: 'new', prompt: fullContextPrompt(system, messages) }
@@ -138,13 +140,14 @@ export class SessionManager {
 
   async commitSuccess(
     sessionId: string,
-    system: string | undefined,
-    requestMessages: readonly Message[],
+    requestSystem: string | undefined,
+    requestMessages: readonly RequestMessage[],
     conversationUrl: string,
     finalText: string,
   ): Promise<void> {
+    const { system, messages } = normalizeRequest(requestSystem, requestMessages)
     const state = await this.state()
-    const combined = [...requestMessages, syntheticAssistantMessage(finalText)]
+    const combined = [...messages, syntheticAssistantMessage(finalText)]
     state.sessions[sessionId] = {
       conversationUrl: canonicalManagedConversationUrl(conversationUrl),
       syncedMessageCount: combined.length,
