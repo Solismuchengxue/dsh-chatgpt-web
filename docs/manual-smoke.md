@@ -1,6 +1,6 @@
 # dsh-chatgpt-web v0.1 manual smoke test
 
-This is the current real-browser acceptance run for `feat/v0.1-implementation`.
+**Historical upstream acceptance procedure for DSH 0.1.1-rc.2.** For the Solis DSH 0.1.7-rc.2 fork, use [the current compatibility notes](dsh-0.1.7-compatibility.md). The pass statements and production-profile/port commands below are historical evidence, not instructions or acceptance claims for this fork.
 
 It is intentionally local and manual because authenticated ChatGPT Web testing depends on the user's browser session. There is deliberately no GitHub Actions or CI workflow for this project.
 

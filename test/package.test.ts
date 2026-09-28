@@ -26,7 +26,7 @@ const manifest = JSON.parse(await readFile(new URL('../extension/manifest.json',
 
 test('package is an installable DSH bundle', () => {
   assert.equal(pkg.name, 'dsh-chatgpt-web')
-  assert.equal(pkg.version, '0.1.0')
+  assert.equal(pkg.version, '0.1.1-solis.1')
   assert.equal(pkg.type, 'module')
   assert.equal(pkg.main, './lib/index.js')
   assert.equal(pkg.types, './lib/index.d.ts')
@@ -53,7 +53,7 @@ test('extension permissions stay scoped to ChatGPT and loopback', () => {
 })
 
 test('README documents install, limitations, privacy, and local-only verification', () => {
-  assert.match(readme, /dsh plugin --profile web add \./)
+  assert.match(readme, /dsh plugin --profile chatgpt-web-compat add \./)
   assert.match(readme, /dsh plugin --profile web add dsh-chatgpt-web/)
   assert.match(readme, /chatgpt-web\/auto/)
   assert.match(readme, /chrome:\/\/extensions/)

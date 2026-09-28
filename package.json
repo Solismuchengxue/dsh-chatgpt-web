@@ -1,6 +1,6 @@
 {
   "name": "dsh-chatgpt-web",
-  "version": "0.1.0",
+  "version": "0.1.1-solis.1",
   "description": "ChatGPT Web primary-model bridge for DeepSeek Harness",
   "license": "MIT",
   "type": "module",
@@ -17,6 +17,7 @@
     "lib",
     "extension",
     "cordis.patch.yml",
+    "docs/dsh-0.1.7-compatibility.md",
     "README.md",
     "LICENSE"
   ],
@@ -25,8 +26,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "check": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test test/*.test.ts",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "node --import tsx --test test/*.test.ts",
     "prepare": "npm run build",
     "prepack": "npm run check && npm test && npm run build"
   },
@@ -40,12 +41,12 @@
     "ws": "^8.18.0"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-llm": "0.1.1-rc.2"
+    "@deepseek-ai/cordis": "~4.0.4",
+    "@deepseek-ai/dsh-llm": "0.1.7-rc.2"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
+    "@deepseek-ai/cordis": "~4.0.4",
+    "@deepseek-ai/dsh-llm": "0.1.7-rc.2",
     "@types/node": "^22.20.0",
     "@types/ws": "^8.5.13",
     "happy-dom": "^18.0.1",

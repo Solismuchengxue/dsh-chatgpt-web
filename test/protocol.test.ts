@@ -31,7 +31,9 @@ test('rejects wrong protocol, missing request id, and invalid sequence', () => {
 
 test('canonicalizes only plugin-manageable ChatGPT conversation urls', () => {
   assert.equal(canonicalManagedConversationUrl('https://chatgpt.com/c/abc-123?foo=bar#hash'), 'https://chatgpt.com/c/abc-123')
-  assert.equal(wireGenerateMessage({ requestId: 'r', sessionId: 's', conversationUrl: 'https://chatgpt.com/c/a?x=1', prompt: 'p' }).conversationUrl, 'https://chatgpt.com/c/a')
+  const generated = wireGenerateMessage({ requestId: 'r', sessionId: 's', conversationUrl: 'https://chatgpt.com/c/a?x=1', prompt: 'p' })
+  assert.equal(generated.type, 'generate')
+  if (generated.type === 'generate') assert.equal(generated.conversationUrl, 'https://chatgpt.com/c/a')
   assert.throws(() => canonicalManagedConversationUrl('https://example.com/c/abc'), /chatgpt\.com/)
   assert.throws(() => canonicalManagedConversationUrl('https://chatgpt.com/'), /\/c\/<id>/)
   assert.throws(() => canonicalManagedConversationUrl('http://chatgpt.com/c/abc'), /https/)

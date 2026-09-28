@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
-  CallId,
+  ToolCallId,
+  createToolResultMessage,
   createAssistantMessage,
   createUserMessage,
   type Message,
@@ -34,11 +35,11 @@ test('history digest changes with semantic content', () => {
 
   const callA = createAssistantMessage({
     source: { provider: 'x', model: 'y' },
-    content: [{ type: 'tool-call', id: CallId('c1'), name: 'tool', arguments: '{"x":1}' }],
+    content: [{ type: 'tool-call', id: ToolCallId('c1'), name: 'tool', arguments: '{"x":1}' }],
   })
   const callB = createAssistantMessage({
     source: { provider: 'x', model: 'y' },
-    content: [{ type: 'tool-call', id: CallId('c1'), name: 'tool', arguments: '{"x":2}' }],
+    content: [{ type: 'tool-call', id: ToolCallId('c1'), name: 'tool', arguments: '{"x":2}' }],
   })
   assert.notEqual(historyDigest([callA]), historyDigest([callB]))
 })
@@ -59,16 +60,11 @@ test('rehydration serialization preserves text, reasoning, and historical tool c
     content: [
       { type: 'text', text: 'answer' },
       { type: 'reasoning', text: 'reasoning context' },
-      { type: 'tool-call', id: CallId('c1'), name: 'lookup', arguments: '{"q":"x"}' },
-      {
-        type: 'tool-result',
-        toolCallId: CallId('c1'),
-        content: [{ type: 'text', text: 'result' }],
-        isError: false,
-      },
+      { type: 'tool-call', id: ToolCallId('c1'), name: 'lookup', arguments: '{"q":"x"}' },
     ],
   })
-  const serialized = serializeHistory([message])
+  const result = createToolResultMessage({ callId: ToolCallId('c1'), content: [{ type: 'text', text: 'result' }], isError: false })
+  const serialized = serializeHistory([message, result])
   assert.match(serialized, /answer/)
   assert.match(serialized, /reasoning context/)
   assert.match(serialized, /historical-tool-call/)
